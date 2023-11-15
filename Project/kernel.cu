@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define SIZE 1024
+#define SIZE 4096
 #define TYPE double
 
 __global__ void gpuVectorAdd(TYPE* bufferIn1, TYPE* bufferIn2, TYPE* bufferOut)
@@ -14,57 +14,60 @@ __global__ void gpuVectorAdd(TYPE* bufferIn1, TYPE* bufferIn2, TYPE* bufferOut)
 	bufferOut[tid] = bufferIn1[tid] + bufferIn2[tid];
 }
 
-int main(int argc, char** argv)
+int main()
 {
-	TYPE* cpuBuffer1;
-	TYPE* cpuBuffer2;
-	TYPE* cpuBuffer3;
+	TYPE* cpuBufferIn1;
+	TYPE* cpuBufferIn2;
+	TYPE* cpuBufferOut;
 
-	TYPE* gpuBuffer1;
-	TYPE* gpuBuffer2;
-	TYPE* gpuBuffer3;
+	TYPE* gpuBufferIn1;
+	TYPE* gpuBufferIn2;
+	TYPE* gpuBufferOut;
 
 	srand(time(NULL));
 
-	cpuBuffer1 = (TYPE*)malloc(SIZE * sizeof(TYPE));
-	cpuBuffer2 = (TYPE*)malloc(SIZE * sizeof(TYPE));
-	cpuBuffer3 = (TYPE*)malloc(SIZE * sizeof(TYPE));
+	cpuBufferIn1 = (TYPE*)malloc(SIZE * sizeof(TYPE));
+	cpuBufferIn2 = (TYPE*)malloc(SIZE * sizeof(TYPE));
+	cpuBufferOut = (TYPE*)malloc(SIZE * sizeof(TYPE));
 
-	cudaMalloc((void**)&gpuBuffer1, SIZE * sizeof(TYPE));
-	cudaMalloc((void**)&gpuBuffer2, SIZE * sizeof(TYPE));
-	cudaMalloc((void**)&gpuBuffer3, SIZE * sizeof(TYPE));
+	cudaMalloc((void**)&gpuBufferIn1, SIZE * sizeof(TYPE));
+	cudaMalloc((void**)&gpuBufferIn2, SIZE * sizeof(TYPE));
+	cudaMalloc((void**)&gpuBufferOut, SIZE * sizeof(TYPE));
 
 	for (int i = 0; i != SIZE; ++i)
 	{
-		cpuBuffer1[i] = (TYPE)rand() / (TYPE)RAND_MAX;
-		cpuBuffer2[i] = (TYPE)rand() / (TYPE)RAND_MAX;
+		cpuBufferIn1[i] = (TYPE)rand() / (TYPE)RAND_MAX;
+		cpuBufferIn2[i] = (TYPE)rand() / (TYPE)RAND_MAX;
 	}
 
-	cudaMemcpy(gpuBuffer1, cpuBuffer1, SIZE * sizeof(TYPE), cudaMemcpyHostToDevice);
-	cudaMemcpy(gpuBuffer2, cpuBuffer2, SIZE * sizeof(TYPE), cudaMemcpyHostToDevice);
+	cudaMemcpy(gpuBufferIn1, cpuBufferIn1, SIZE * sizeof(TYPE), cudaMemcpyHostToDevice);
+	cudaMemcpy(gpuBufferIn2, cpuBufferIn2, SIZE * sizeof(TYPE), cudaMemcpyHostToDevice);
 
-	gpuVectorAdd<<<32, 32>>>(gpuBuffer1, gpuBuffer2, gpuBuffer3);
+	int threads = 32;
+	int blocks  = (SIZE + threads - 1) / threads;
+
+	gpuVectorAdd<<<blocks, threads>>>(gpuBufferIn1, gpuBufferIn2, gpuBufferOut);
 
 	cudaDeviceSynchronize();
 
-	cudaMemcpy(cpuBuffer3, gpuBuffer3, SIZE * sizeof(TYPE), cudaMemcpyDeviceToHost);
+	cudaMemcpy(cpuBufferOut, gpuBufferOut, SIZE * sizeof(TYPE), cudaMemcpyDeviceToHost);
 
 	int errorCount = 0;
 
 	for (int i = 0; i != SIZE; ++i)
 	{
-		errorCount += ((cpuBuffer1[i] + cpuBuffer2[i]) != cpuBuffer3[i]);
+		errorCount += ((cpuBufferIn1[i] + cpuBufferIn2[i]) != cpuBufferOut[i]);
 	}
 
 	printf("%d\n", errorCount);
 
-	free(cpuBuffer1);
-	free(cpuBuffer2);
-	free(cpuBuffer3);
+	free(cpuBufferIn1);
+	free(cpuBufferIn2);
+	free(cpuBufferOut);
 
-	cudaFree(gpuBuffer1);
-	cudaFree(gpuBuffer2);
-	cudaFree(gpuBuffer3);
+	cudaFree(gpuBufferIn1);
+	cudaFree(gpuBufferIn2);
+	cudaFree(gpuBufferOut);
 
 	return 0;
 }
