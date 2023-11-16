@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define SIZE 1024
+#define SIZE 32768
 #define TYPE double
 
 __global__ void gpuVectorAdd(TYPE* bufferIn1, TYPE* bufferIn2, TYPE* bufferOut, int bufferSize)
@@ -43,10 +43,9 @@ int main()
 	cudaMemcpy(gpuBufferIn2, cpuBufferIn2, SIZE * sizeof(TYPE), cudaMemcpyHostToDevice);
 
 	int threads = 64;
-	int blocks = (SIZE + threads - 1) / threads;
+	int blocks  = (SIZE + threads - 1) / threads;
 
 	gpuVectorAdd<<<blocks, threads>>>(gpuBufferIn1, gpuBufferIn2, gpuBufferOut, SIZE);
-
 	cudaDeviceSynchronize();
 
 	cudaMemcpy(cpuBufferOut, gpuBufferOut, SIZE * sizeof(TYPE), cudaMemcpyDeviceToHost);
