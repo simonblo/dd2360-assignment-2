@@ -46,7 +46,7 @@ int main()
 
 	clock_t time1 = clock();
 
-	int threads = 32;
+	int threads = 64;
 	int blocks = (SIZE + threads - 1) / threads;
 
 	gpuVectorAdd<<<blocks, threads>>>(gpuBufferIn1, gpuBufferIn2, gpuBufferOut, SIZE);
@@ -67,9 +67,9 @@ int main()
 
 	printf("Elements:      %d\n", SIZE);
 	printf("Errors:        %d\n", errorCount);
-	printf("CPU-GPU Copy:  %.5f seconds\n", (double)(time1 - time0) / (double)CLOCKS_PER_SEC);
-	printf("GPU Execution: %.5f seconds\n", (double)(time2 - time1) / (double)CLOCKS_PER_SEC);
-	printf("GPU-CPU Copy:  %.5f seconds\n", (double)(time3 - time2) / (double)CLOCKS_PER_SEC);
+	printf("CPU-GPU Copy:  %.3f seconds\n", (double)(time1 - time0) / (double)CLOCKS_PER_SEC);
+	printf("GPU Execution: %.3f seconds\n", (double)(time2 - time1) / (double)CLOCKS_PER_SEC);
+	printf("GPU-CPU Copy:  %.3f seconds\n", (double)(time3 - time2) / (double)CLOCKS_PER_SEC);
 
 	cudaFree(gpuBufferIn1);
 	cudaFree(gpuBufferIn2);
