@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define SIZE 32768
+#define DIMU 4
+#define DIMV 4
+#define DIMW 4
 #define TYPE double
 
 __global__ void gpuVectorAdd(TYPE* bufferIn1, TYPE* bufferIn2, TYPE* bufferOut, int bufferSize)
@@ -16,57 +18,66 @@ __global__ void gpuVectorAdd(TYPE* bufferIn1, TYPE* bufferIn2, TYPE* bufferOut, 
 
 int main()
 {
-	TYPE* cpuBufferIn1;
-	TYPE* cpuBufferIn2;
-	TYPE* cpuBufferOut;
-	TYPE* gpuBufferIn1;
-	TYPE* gpuBufferIn2;
-	TYPE* gpuBufferOut;
+	TYPE* cpuMatrixA;
+	TYPE* cpuMatrixB;
+	TYPE* cpuMatrixC;
+	TYPE* gpuMatrixA;
+	TYPE* gpuMatrixB;
+	TYPE* gpuMatrixC;
 
 	srand(time(NULL));
 
-	cpuBufferIn1 = (TYPE*)malloc(SIZE * sizeof(TYPE));
-	cpuBufferIn2 = (TYPE*)malloc(SIZE * sizeof(TYPE));
-	cpuBufferOut = (TYPE*)malloc(SIZE * sizeof(TYPE));
+	cpuMatrixA = (TYPE*)malloc(DIMU * DIMV * sizeof(TYPE));
+	cpuMatrixB = (TYPE*)malloc(DIMV * DIMW * sizeof(TYPE));
+	cpuMatrixC = (TYPE*)malloc(DIMU * DIMW * sizeof(TYPE));
 
-	cudaMalloc((void**)&gpuBufferIn1, SIZE * sizeof(TYPE));
-	cudaMalloc((void**)&gpuBufferIn2, SIZE * sizeof(TYPE));
-	cudaMalloc((void**)&gpuBufferOut, SIZE * sizeof(TYPE));
+	cudaMalloc((void**)&gpuMatrixA, DIMU * DIMV * sizeof(TYPE));
+	cudaMalloc((void**)&gpuMatrixB, DIMV * DIMW * sizeof(TYPE));
+	cudaMalloc((void**)&gpuMatrixC, DIMU * DIMW * sizeof(TYPE));
 
-	for (int i = 0; i != SIZE; ++i)
-	{
-		cpuBufferIn1[i] = (TYPE)rand() / (TYPE)RAND_MAX;
-		cpuBufferIn2[i] = (TYPE)rand() / (TYPE)RAND_MAX;
-	}
+	for (int i = 0; i != DIMU * DIMV; ++i) cpuMatrixA[i] = (TYPE)rand() / (TYPE)RAND_MAX;
+	for (int i = 0; i != DIMV * DIMW; ++i) cpuMatrixB[i] = (TYPE)rand() / (TYPE)RAND_MAX;
 
-	cudaMemcpy(gpuBufferIn1, cpuBufferIn1, SIZE * sizeof(TYPE), cudaMemcpyHostToDevice);
-	cudaMemcpy(gpuBufferIn2, cpuBufferIn2, SIZE * sizeof(TYPE), cudaMemcpyHostToDevice);
+	cudaMemcpy(gpuMatrixA, cpuMatrixA, DIMU * DIMV * sizeof(TYPE), cudaMemcpyHostToDevice);
+	cudaMemcpy(gpuMatrixB, cpuMatrixB, DIMV * DIMW * sizeof(TYPE), cudaMemcpyHostToDevice);
 
-	int threads = 64;
-	int blocks  = (SIZE + threads - 1) / threads;
+	//int threads = 64;
+	//int blocks  = (SIZE + threads - 1) / threads; // TODO
 
-	gpuVectorAdd<<<blocks, threads>>>(gpuBufferIn1, gpuBufferIn2, gpuBufferOut, SIZE);
+	//gpuVectorAdd<<<blocks, threads>>>(gpuBufferIn1, gpuBufferIn2, gpuBufferOut, SIZE); // TODO
 	cudaDeviceSynchronize();
 
-	cudaMemcpy(cpuBufferOut, gpuBufferOut, SIZE * sizeof(TYPE), cudaMemcpyDeviceToHost);
+	cudaMemcpy(cpuMatrixC, gpuMatrixC, DIMU * DIMW * sizeof(TYPE), cudaMemcpyDeviceToHost);
 
 	int errorCount = 0;
 
-	for (int i = 0; i != SIZE; ++i)
+	for (int i = 0; i != DIMU * DIMW; ++i)
 	{
-		errorCount += ((cpuBufferIn1[i] + cpuBufferIn2[i]) != cpuBufferOut[i]);
+		int u = i / DIMW;
+		int w = i % DIMW;
+
+		TYPE value = (TYPE)0;
+
+		for (int v = 0; v != DIMV; ++v)
+		{
+			value += cpuMatrixA[v + u * DIMV] * cpuMatrixB[w + u * DIMW];
+		}
+
+		errorCount += (value != cpuMatrixC[i]);
 	}
 
-	printf("Elements: %d\n", SIZE);
+	printf("Matrix A: (%d, %d)\n", DIMU, DIMV);
+	printf("Matrix B: (%d, %d)\n", DIMV, DIMW);
+	printf("Matrix C: (%d, %d)\n", DIMU, DIMW);
 	printf("Errors:   %d\n", errorCount);
 
-	cudaFree(gpuBufferIn1);
-	cudaFree(gpuBufferIn2);
-	cudaFree(gpuBufferOut);
+	cudaFree(gpuMatrixA);
+	cudaFree(gpuMatrixB);
+	cudaFree(gpuMatrixC);
 
-	free(cpuBufferIn1);
-	free(cpuBufferIn2);
-	free(cpuBufferOut);
+	free(cpuMatrixA);
+	free(cpuMatrixB);
+	free(cpuMatrixC);
 
 	return 0;
 }
