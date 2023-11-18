@@ -5,28 +5,28 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define DIMU 511
-#define DIMV 1023
-#define DIMW 4094
+#define DIMU 1024
+#define DIMV 1024
+#define DIMW 1024
 #define TYPE double
 
-__global__ void gpuVectorAdd(TYPE* matrixA, TYPE* matrixB, TYPE* matrixC)
+__global__ void gpuVectorAdd(TYPE* matrixA, TYPE* matrixB, TYPE* matrixC, int dimU, int dimV, int dimW)
 {
 	uint2 tid;
 	tid.x = threadIdx.x + blockIdx.x * blockDim.x;
 	tid.y = threadIdx.y + blockIdx.y * blockDim.y;
 
-	if (tid.x >= DIMW) return;
-	if (tid.y >= DIMU) return;
+	if (tid.x >= dimW) return;
+	if (tid.y >= dimU) return;
 
-	TYPE value = (TYPE)0;
+	TYPE element = (TYPE)0;
 
-	for (int v = 0; v != DIMV; ++v)
+	for (int v = 0; v != dimV; ++v)
 	{
-		value += matrixA[v + tid.y * DIMV] * matrixB[tid.x + v * DIMW];
+		element += matrixA[v + tid.y * dimV] * matrixB[tid.x + v * dimW];
 	}
 
-	matrixC[tid.x + tid.y * DIMW] = value;
+	matrixC[tid.x + tid.y * dimW] = element;
 }
 
 int main()
@@ -64,7 +64,7 @@ int main()
 	blocks.y = (DIMU + threads.y - 1) / threads.y;
 	blocks.z = 1;
 
-	gpuVectorAdd<<<blocks, threads>>>(gpuMatrixA, gpuMatrixB, gpuMatrixC);
+	gpuVectorAdd<<<blocks, threads>>>(gpuMatrixA, gpuMatrixB, gpuMatrixC, DIMU, DIMV, DIMW);
 	cudaDeviceSynchronize();
 
 	cudaMemcpy(cpuMatrixC, gpuMatrixC, DIMU * DIMW * sizeof(TYPE), cudaMemcpyDeviceToHost);
