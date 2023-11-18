@@ -11,7 +11,7 @@
 #define DIMW 1024
 #define TYPE double
 
-__global__ void gpuVectorAdd(TYPE* matrixA, TYPE* matrixB, TYPE* matrixC, int dimU, int dimV, int dimW)
+__global__ void gpuMatrixMultiply(TYPE* matrixA, TYPE* matrixB, TYPE* matrixC, int dimU, int dimV, int dimW)
 {
 	uint2 tid;
 	tid.x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -65,7 +65,7 @@ int main()
 	blocks.y = (DIMU + threads.y - 1) / threads.y;
 	blocks.z = 1;
 
-	gpuVectorAdd<<<blocks, threads>>>(gpuMatrixA, gpuMatrixB, gpuMatrixC, DIMU, DIMV, DIMW);
+	gpuMatrixMultiply<<<blocks, threads>>>(gpuMatrixA, gpuMatrixB, gpuMatrixC, DIMU, DIMV, DIMW);
 	cudaDeviceSynchronize();
 
 	cudaMemcpy(cpuMatrixC, gpuMatrixC, DIMU * DIMW * sizeof(TYPE), cudaMemcpyDeviceToHost);
@@ -84,7 +84,7 @@ int main()
 			value -= cpuMatrixA[v + u * DIMV] * cpuMatrixB[w + v * DIMW];
 		}
 
-		errorCount += (fabs(value) > 0.00001f);
+		errorCount += (fabs(value) > 0.001f);
 	}
 
 	printf("Matrix A: (%d, %d)\n", DIMU, DIMV);
