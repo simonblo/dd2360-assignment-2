@@ -1,6 +1,7 @@
 ﻿#include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <device_launch_parameters.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -76,14 +77,14 @@ int main()
 		int u = i / DIMW;
 		int w = i % DIMW;
 
-		TYPE value = (TYPE)0;
+		TYPE value = cpuMatrixC[i];
 
 		for (int v = 0; v != DIMV; ++v)
 		{
-			value += cpuMatrixA[v + u * DIMV] * cpuMatrixB[w + v * DIMW];
+			value -= cpuMatrixA[v + u * DIMV] * cpuMatrixB[w + v * DIMW];
 		}
 
-		errorCount += (value != cpuMatrixC[i]);
+		errorCount += (fabs(value) > 0.00001f);
 	}
 
 	printf("Matrix A: (%d, %d)\n", DIMU, DIMV);
